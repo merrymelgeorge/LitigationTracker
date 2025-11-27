@@ -752,6 +752,86 @@ async def delete_user(
     return RedirectResponse(url="/users", status_code=302)
 
 
+@app.get("/profile", response_class=HTMLResponse)
+async def profile_page(
+    request: Request,
+    user: User = Depends(get_current_user)
+):
+    """User profile page for changing password"""
+    return templates.TemplateResponse("profile.html", {
+        "request": request,
+        "user": user
+    })
+
+
+@app.post("/profile/change-password")
+async def change_password(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+    current_password: str = Form(...),
+    new_password: str = Form(...),
+    confirm_password: str = Form(...)
+):
+    """Change user's own password"""
+    from auth import verify_password
+    
+    # Verify current password
+    if not verify_password(current_password, user.hashed_password):
+        return templates.TemplateResponse("profile.html", {
+            "request": request,
+            "user": user,
+            "error": "Current password is incorrect"
+        })
+    
+    # Check new password confirmation
+    if new_password != confirm_password:
+        return templates.TemplateResponse("profile.html", {
+            "request": request,
+            "user": user,
+            "error": "New passwords do not match"
+        })
+    
+    # Check password length
+    if len(new_password) < 6:
+        return templates.TemplateResponse("profile.html", {
+            "request": request,
+            "user": user,
+            "error": "Password must be at least 6 characters"
+        })
+    
+    # Update password
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    
+    return templates.TemplateResponse("profile.html", {
+        "request": request,
+        "user": user,
+        "success": "Password changed successfully!"
+    })
+
+
+@app.post("/users/{user_id}/reset-password")
+async def reset_user_password(
+    user_id: int,
+    admin: User = Depends(require_admin),
+    db: Session = Depends(get_db),
+    new_password: str = Form(...)
+):
+    """Reset another user's password (admin only)"""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if len(new_password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    user.hashed_password = get_password_hash(new_password)
+    db.commit()
+    
+    return RedirectResponse(url="/users", status_code=302)
+
+
 # ============== Excel Import Routes ==============
 
 @app.get("/import", response_class=HTMLResponse)

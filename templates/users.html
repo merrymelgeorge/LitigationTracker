@@ -52,6 +52,7 @@
                     <td>
                         {% if u.id != user.id %}
                         <div class="flex gap-1">
+                            <button type="button" class="btn btn-sm btn-secondary btn-icon" title="Reset Password" onclick="openResetModal({{ u.id }}, '{{ u.username }}')">🔑</button>
                             <form method="POST" action="/users/{{ u.id }}/toggle" style="display: inline;">
                                 <button type="submit" class="btn btn-sm btn-secondary btn-icon" title="{{ 'Deactivate' if u.is_active else 'Activate' }}">
                                     {{ '🚫' if u.is_active else '✅' }}
@@ -62,7 +63,7 @@
                             </form>
                         </div>
                         {% else %}
-                        <span class="text-muted">Current user</span>
+                        <a href="/profile" class="btn btn-sm btn-secondary">Change Password</a>
                         {% endif %}
                     </td>
                 </tr>
@@ -114,6 +115,32 @@
 </div>
 {% endblock %}
 
+<!-- Reset Password Modal -->
+<div id="reset-password-modal" class="modal-backdrop">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">🔑 Reset Password</h3>
+            <button class="modal-close" onclick="closeModal('reset-password-modal')">&times;</button>
+        </div>
+        <form method="POST" id="reset-password-form">
+            <div class="modal-body">
+                <p style="color: var(--text-muted); margin-bottom: 16px;">
+                    Reset password for user: <strong id="reset-username" style="color: var(--accent-primary);"></strong>
+                </p>
+                <div class="form-group">
+                    <label class="form-label" for="reset_new_password">New Password *</label>
+                    <input type="password" id="reset_new_password" name="new_password" class="form-input" 
+                           required placeholder="Enter new password (min. 6 characters)" minlength="6">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('reset-password-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Reset Password</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 {% block scripts %}
 <script>
 function openModal(modalId) {
@@ -122,6 +149,13 @@ function openModal(modalId) {
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.remove('active');
+}
+
+function openResetModal(userId, username) {
+    document.getElementById('reset-username').textContent = username;
+    document.getElementById('reset-password-form').action = '/users/' + userId + '/reset-password';
+    document.getElementById('reset_new_password').value = '';
+    openModal('reset-password-modal');
 }
 
 // Close modal when clicking outside
