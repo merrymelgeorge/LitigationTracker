@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block title %}Case {{ case.case_id }} - Litigation Tracker{% endblock %}
+
+{% block content %}
+<!-- Case Header -->
+<div class="case-header">
+    <div>
+        <div class="case-title-section">
+            <span class="case-badge">{{ case.case_id }}</span>
+            <span class="badge badge-{{ case.forum|lower|replace(' ', '')|replace('tribunals', '') }}">{{ case.forum }}</span>
+            <span class="badge badge-{{ case.case_status|lower }}">{{ case.case_status }}</span>
+        </div>
+        <div class="case-meta">
+            {% if case.case_no %}
+            <span class="text-muted">Case No: <strong>{{ case.case_no }}</strong></span>
+            {% endif %}
+            {% if case.case_type %}
+            <span class="text-muted">• {{ case.case_type }}</span>
+            {% endif %}
+        </div>
+    </div>
+    <div class="case-actions">
+        <a href="/cases/{{ case.id }}/edit" class="btn btn-primary">✏️ Edit Case</a>
+        <a href="/cases" class="btn btn-secondary">← Back to List</a>
+    </div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+    <button class="tab active" onclick="showTab('details')">📋 Details</button>
+    <button class="tab" onclick="showTab('parties')">👥 Parties</button>
+    <button class="tab" onclick="showTab('documents')">📄 Documents</button>
+    <button class="tab" onclick="showTab('hearings')">📅 Hearings</button>
+</div>
+
+<!-- Details Tab -->
+<div id="tab-details" class="tab-content active">
+    <div class="card mb-3">
+        <h3 class="section-title">Case Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Forum</div>
+                <div class="info-value">{{ case.forum }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Case Type</div>
+                <div class="info-value">{{ case.case_type or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Case Number</div>
+                <div class="info-value">{{ case.case_no or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Status</div>
+                <div class="info-value"><span class="badge badge-{{ case.case_status|lower }}">{{ case.case_status }}</span></div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Connected Cases</div>
+                <div class="info-value">{{ case.connected_case_nos or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Is Appeal</div>
+                <div class="info-value">{{ 'Yes' if case.is_appeal else 'No' }}</div>
+            </div>
+        </div>
+    </div>
+    
+    {% if case.is_appeal %}
+    <div class="card mb-3">
+        <h3 class="section-title">Lower Court Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Lower Court</div>
+                <div class="info-value">{{ case.lower_court or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Lower Court Case No.</div>
+                <div class="info-value">{{ case.lower_court_case_no or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Order Date</div>
+                <div class="info-value">{{ case.lower_court_order_date.strftime('%d %b %Y') if case.lower_court_order_date else '-' }}</div>
+            </div>
+            {% if case.lower_court_order_doc %}
+            <div class="info-item">
+                <div class="info-label">Order Document</div>
+                <div class="info-value"><a href="/{{ case.lower_court_order_doc }}" target="_blank" class="btn btn-sm btn-secondary">📥 Download</a></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="card mb-3">
+        <h3 class="section-title">Counsel Information</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Counsel on Record</div>
+                <div class="info-value">{{ case.counsel_name or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Contact Number</div>
+                <div class="info-value">{{ case.counsel_contact or '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">ASG Engaged</div>
+                <div class="info-value">{{ 'Yes' if case.asg_engaged else 'No' }}</div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-3">
+        <h3 class="section-title">Hearing Schedule</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Last Hearing Date</div>
+                <div class="info-value">{{ case.last_hearing_date.strftime('%d %b %Y') if case.last_hearing_date else '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Next Hearing Date</div>
+                <div class="info-value">{{ case.next_hearing_date.strftime('%d %b %Y') if case.next_hearing_date else '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Affidavit Status</div>
+                <div class="info-value">{{ case.affidavit_status or '-' }}</div>
+            </div>
+        </div>
+    </div>
+    
+    {% if case.brief_facts %}
+    <div class="card mb-3">
+        <h3 class="section-title">Brief Facts</h3>
+        <div style="color: var(--text-secondary); line-height: 1.8; white-space: pre-wrap;">{{ case.brief_facts }}</div>
+    </div>
+    {% endif %}
+    
+    {% if case.final_order_date or case.final_order_doc %}
+    <div class="card mb-3">
+        <h3 class="section-title">Final Order</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Final Order Date</div>
+                <div class="info-value">{{ case.final_order_date.strftime('%d %b %Y') if case.final_order_date else '-' }}</div>
+            </div>
+            {% if case.final_order_doc %}
+            <div class="info-item">
+                <div class="info-label">Final Order Document</div>
+                <div class="info-value"><a href="/{{ case.final_order_doc }}" target="_blank" class="btn btn-sm btn-secondary">📥 Download</a></div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="card">
+        <h3 class="section-title">Audit Trail</h3>
+        <div class="info-grid">
+            <div class="info-item">
+                <div class="info-label">Created By</div>
+                <div class="info-value">{{ case.creator.full_name if case.creator else '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Created At</div>
+                <div class="info-value">{{ case.created_at.strftime('%d %b %Y, %H:%M') }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Last Updated By</div>
+                <div class="info-value">{{ case.updater.full_name if case.updater else '-' }}</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">Last Updated At</div>
+                <div class="info-value">{{ case.updated_at.strftime('%d %b %Y, %H:%M') }}</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Parties Tab -->
+<div id="tab-parties" class="tab-content">
+    <div class="dashboard-grid">
+        <!-- Petitioners -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📤 Petitioners</h3>
+                <button class="btn btn-sm btn-primary" onclick="openModal('add-petitioner-modal')">➕ Add</button>
+            </div>
+            
+            {% if petitioners %}
+            <div class="party-list">
+                {% for party in petitioners %}
+                <div class="party-item">
+                    <div class="party-info">
+                        <div class="party-number">P{{ party.party_number }}</div>
+                        <div>
+                            <div class="party-name">{{ party.name }}</div>
+                            {% if party.address %}
+                            <div class="party-address">{{ party.address }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <form method="POST" action="/parties/{{ party.id }}/delete" onsubmit="return confirm('Delete this party?')">
+                        <button type="submit" class="btn btn-sm btn-danger btn-icon">🗑️</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">👤</div>
+                <div class="empty-text">No petitioners added yet</div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <!-- Respondents -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📥 Respondents</h3>
+                <button class="btn btn-sm btn-primary" onclick="openModal('add-respondent-modal')">➕ Add</button>
+            </div>
+            
+            {% if respondents %}
+            <div class="party-list">
+                {% for party in respondents %}
+                <div class="party-item">
+                    <div class="party-info">
+                        <div class="party-number">R{{ party.party_number }}</div>
+                        <div>
+                            <div class="party-name">{{ party.name }}</div>
+                            {% if party.address %}
+                            <div class="party-address">{{ party.address }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <form method="POST" action="/parties/{{ party.id }}/delete" onsubmit="return confirm('Delete this party?')">
+                        <button type="submit" class="btn btn-sm btn-danger btn-icon">🗑️</button>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <div class="empty-icon">👤</div>
+                <div class="empty-text">No respondents added yet</div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Documents Tab -->
+<div id="tab-documents" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📄 Case Documents</h3>
+            <button class="btn btn-sm btn-primary" onclick="openModal('add-document-modal')">➕ Upload Document</button>
+        </div>
+        
+        {% if documents %}
+        <div class="document-list">
+            {% for doc in documents %}
+            <div class="document-item">
+                <div class="document-info">
+                    <div class="document-icon">📎</div>
+                    <div>
+                        <div class="document-name">{{ doc.doc_name }}</div>
+                        <div class="document-meta">{{ doc.doc_type }} • {{ doc.filing_date.strftime('%d %b %Y') if doc.filing_date else 'No filing date' }}</div>
+                    </div>
+                </div>
+                <div class="document-actions">
+                    <a href="/documents/{{ doc.id }}/download" class="btn btn-sm btn-secondary">📥 Download</a>
+                    <form method="POST" action="/documents/{{ doc.id }}/delete" style="display: inline;" onsubmit="return confirm('Delete this document?')">
+                        <button type="submit" class="btn btn-sm btn-danger btn-icon">🗑️</button>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📂</div>
+            <div class="empty-title">No Documents</div>
+            <div class="empty-text">Upload case documents to keep them organized</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Hearings Tab -->
+<div id="tab-hearings" class="tab-content">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📅 Hearing Chronology</h3>
+            <button class="btn btn-sm btn-primary" onclick="openModal('add-hearing-modal')">➕ Add Hearing</button>
+        </div>
+        
+        {% if hearings %}
+        <div class="hearing-timeline">
+            {% for hearing in hearings %}
+            <div class="hearing-item">
+                <div class="flex-between">
+                    <div class="hearing-date">📅 {{ hearing.hearing_date.strftime('%d %B %Y') }}</div>
+                    <form method="POST" action="/hearings/{{ hearing.id }}/delete" onsubmit="return confirm('Delete this hearing record?')">
+                        <button type="submit" class="btn btn-sm btn-danger btn-icon">🗑️</button>
+                    </form>
+                </div>
+                <div class="hearing-brief">{{ hearing.brief }}</div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <div class="empty-title">No Hearing Records</div>
+            <div class="empty-text">Add hearing records to track case progress</div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add Petitioner Modal -->
+<div id="add-petitioner-modal" class="modal-backdrop">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Petitioner</h3>
+            <button class="modal-close" onclick="closeModal('add-petitioner-modal')">&times;</button>
+        </div>
+        <form method="POST" action="/cases/{{ case.id }}/parties">
+            <div class="modal-body">
+                <input type="hidden" name="party_type" value="petitioner">
+                <div class="form-group">
+                    <label class="form-label" for="pet_name">Name *</label>
+                    <input type="text" id="pet_name" name="name" class="form-input" required placeholder="Full name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="pet_address">Address</label>
+                    <textarea id="pet_address" name="address" class="form-textarea" placeholder="Complete address"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('add-petitioner-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Petitioner</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Respondent Modal -->
+<div id="add-respondent-modal" class="modal-backdrop">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Respondent</h3>
+            <button class="modal-close" onclick="closeModal('add-respondent-modal')">&times;</button>
+        </div>
+        <form method="POST" action="/cases/{{ case.id }}/parties">
+            <div class="modal-body">
+                <input type="hidden" name="party_type" value="respondent">
+                <div class="form-group">
+                    <label class="form-label" for="res_name">Name *</label>
+                    <input type="text" id="res_name" name="name" class="form-input" required placeholder="Full name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="res_address">Address</label>
+                    <textarea id="res_address" name="address" class="form-textarea" placeholder="Complete address"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('add-respondent-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Respondent</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Document Modal -->
+<div id="add-document-modal" class="modal-backdrop">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Upload Document</h3>
+            <button class="modal-close" onclick="closeModal('add-document-modal')">&times;</button>
+        </div>
+        <form method="POST" action="/cases/{{ case.id }}/documents" enctype="multipart/form-data">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="doc_type">Document Type *</label>
+                    <select id="doc_type" name="doc_type" class="form-select" required>
+                        <option value="">Select Type</option>
+                        <option value="Affidavit of Petitioner">Affidavit of Petitioner</option>
+                        <option value="Typed Set from Petitioner">Typed Set from Petitioner</option>
+                        <option value="Counter Affidavit">Counter Affidavit from Respondent</option>
+                        <option value="Rejoinder">Rejoinder</option>
+                        <option value="Court Order">Court Order</option>
+                        <option value="Written Submission">Written Submission</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="filing_date">Filing Date</label>
+                    <input type="date" id="filing_date" name="filing_date" class="form-input">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Document File *</label>
+                    <div class="form-file">
+                        <input type="file" id="doc_file" name="file" required accept=".pdf,.doc,.docx,.jpg,.jpeg,.png">
+                        <div class="form-file-label">
+                            📎 Click to upload or drag and drop
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('add-document-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Upload Document</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Add Hearing Modal -->
+<div id="add-hearing-modal" class="modal-backdrop">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Add Hearing Record</h3>
+            <button class="modal-close" onclick="closeModal('add-hearing-modal')">&times;</button>
+        </div>
+        <form method="POST" action="/cases/{{ case.id }}/hearings">
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label" for="hearing_date">Hearing Date *</label>
+                    <input type="date" id="hearing_date" name="hearing_date" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="brief">Brief of Hearing *</label>
+                    <textarea id="brief" name="brief" class="form-textarea" required placeholder="What happened during this hearing..."></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('add-hearing-modal')">Cancel</button>
+                <button type="submit" class="btn btn-primary">Add Hearing</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function showTab(tabId) {
+    // Hide all tab contents
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remove active class from all tabs
+    document.querySelectorAll('.tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // Show selected tab content
+    document.getElementById('tab-' + tabId).classList.add('active');
+    
+    // Add active class to clicked tab
+    event.target.classList.add('active');
+}
+
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+// Close modal when clicking outside
+document.querySelectorAll('.modal-backdrop').forEach(backdrop => {
+    backdrop.addEventListener('click', function(e) {
+        if (e.target === this) {
+            this.classList.remove('active');
+        }
+    });
+});
+</script>
+{% endblock %}
+

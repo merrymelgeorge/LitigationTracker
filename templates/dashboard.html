@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Litigation Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-subtitle">Overview of all litigation cases</p>
+    </div>
+    <a href="/cases/new" class="btn btn-primary">➕ New Case</a>
+</div>
+
+<!-- Statistics Cards -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon total">📁</div>
+        <div class="stat-value">{{ total_cases }}</div>
+        <div class="stat-label">Total Cases</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon active">⚡</div>
+        <div class="stat-value">{{ status_stats.get('Hearing', 0) }}</div>
+        <div class="stat-label">In Hearing</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon pending">⏳</div>
+        <div class="stat-value">{{ status_stats.get('Filed', 0) + status_stats.get('Admission', 0) }}</div>
+        <div class="stat-label">Pending</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon urgent">🔔</div>
+        <div class="stat-value">{{ upcoming_hearings|length }}</div>
+        <div class="stat-label">Hearings in 10 Days</div>
+    </div>
+</div>
+
+<div class="dashboard-grid">
+    <!-- Upcoming Hearings -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">🗓️ Upcoming Hearings (Next 10 Days)</h3>
+            <a href="/cases?status=Hearing" class="btn btn-sm btn-secondary">View All</a>
+        </div>
+        
+        {% if upcoming_hearings %}
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Case ID</th>
+                        <th>Case No.</th>
+                        <th>Forum</th>
+                        <th>Hearing Date</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for case in upcoming_hearings %}
+                    <tr onclick="window.location='/cases/{{ case.id }}'" style="cursor: pointer;">
+                        <td><span class="case-id">{{ case.case_id }}</span></td>
+                        <td>{{ case.case_no or '-' }}</td>
+                        <td><span class="badge badge-{{ case.forum|lower|replace(' ', '')|replace('tribunals', '') }}">{{ case.forum }}</span></td>
+                        <td>{{ case.next_hearing_date.strftime('%d %b %Y') if case.next_hearing_date else '-' }}</td>
+                        <td><span class="badge badge-{{ case.case_status|lower }}">{{ case.case_status }}</span></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon">📅</div>
+            <div class="empty-title">No Upcoming Hearings</div>
+            <div class="empty-text">No cases scheduled for hearing in the next 10 days</div>
+        </div>
+        {% endif %}
+    </div>
+    
+    <!-- Statistics Breakdown -->
+    <div>
+        <!-- By Status -->
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3 class="card-title">📊 Cases by Status</h3>
+            </div>
+            <div class="stat-breakdown">
+                {% for status in statuses %}
+                <div class="flex-between mb-1" style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                    <span class="badge badge-{{ status|lower }}">{{ status }}</span>
+                    <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">{{ status_stats.get(status, 0) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <!-- By Forum -->
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">🏛️ Cases by Forum</h3>
+            </div>
+            <div class="stat-breakdown">
+                {% for forum in forums %}
+                <div class="flex-between mb-1" style="padding: 8px 0; border-bottom: 1px solid var(--border-color);">
+                    <span class="badge badge-{{ forum|lower|replace(' ', '')|replace('tribunals', '') }}">{{ forum }}</span>
+                    <span style="font-weight: 600; font-family: 'JetBrains Mono', monospace;">{{ forum_stats.get(forum, 0) }}</span>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Recent Cases -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h3 class="card-title">🕐 Recently Updated Cases</h3>
+        <a href="/cases" class="btn btn-sm btn-secondary">View All Cases</a>
+    </div>
+    
+    {% if recent_cases %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Case ID</th>
+                    <th>Case No.</th>
+                    <th>Forum</th>
+                    <th>Case Type</th>
+                    <th>Status</th>
+                    <th>Last Updated</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for case in recent_cases %}
+                <tr onclick="window.location='/cases/{{ case.id }}'" style="cursor: pointer;">
+                    <td><span class="case-id">{{ case.case_id }}</span></td>
+                    <td>{{ case.case_no or '-' }}</td>
+                    <td><span class="badge badge-{{ case.forum|lower|replace(' ', '')|replace('tribunals', '') }}">{{ case.forum }}</span></td>
+                    <td>{{ case.case_type or '-' }}</td>
+                    <td><span class="badge badge-{{ case.case_status|lower }}">{{ case.case_status }}</span></td>
+                    <td>{{ case.updated_at.strftime('%d %b %Y, %H:%M') }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📁</div>
+        <div class="empty-title">No Cases Yet</div>
+        <div class="empty-text">Start by adding your first case</div>
+        <a href="/cases/new" class="btn btn-primary mt-2">➕ Add First Case</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

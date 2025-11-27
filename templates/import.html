@@ -1,0 +1,345 @@
+{% extends "base.html" %}
+
+{% block title %}Import Cases - Litigation Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">Import Cases from Excel</h1>
+        <p class="page-subtitle">Bulk import cases from your existing Excel files</p>
+    </div>
+    <a href="/import/template" class="btn btn-secondary">📥 Download Template</a>
+</div>
+
+{% if error %}
+<div class="card mb-3" style="border-color: var(--accent-danger);">
+    <div style="display: flex; align-items: center; gap: 12px; color: var(--accent-danger);">
+        <span style="font-size: 24px;">⚠️</span>
+        <div>
+            <strong>Import Failed</strong>
+            <p class="text-muted mb-0" style="margin-top: 4px;">{{ error }}</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% if success is not none %}
+<div class="card mb-3" style="border-color: var(--accent-success);">
+    <div style="display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 24px;">✅</span>
+        <div>
+            <strong style="color: var(--accent-success);">Import Completed</strong>
+            <p class="text-muted mb-0" style="margin-top: 4px;">
+                Successfully imported <strong style="color: var(--accent-success);">{{ success }}</strong> cases.
+                {% if errors and errors > 0 %}
+                <span style="color: var(--accent-danger);"><strong>{{ errors }}</strong> rows had errors.</span>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    
+    {% if error_messages and error_messages|length > 0 %}
+    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border-color);">
+        <strong style="color: var(--accent-danger);">Errors:</strong>
+        <ul style="margin-top: 8px; color: var(--text-muted); font-size: 13px;">
+            {% for err in error_messages %}
+            <li>{{ err }}</li>
+            {% endfor %}
+            {% if total_errors > 10 %}
+            <li style="color: var(--text-muted);">... and {{ total_errors - 10 }} more errors</li>
+            {% endif %}
+        </ul>
+    </div>
+    {% endif %}
+    
+    <div style="margin-top: 16px;">
+        <a href="/cases" class="btn btn-primary">📁 View All Cases</a>
+    </div>
+</div>
+{% endif %}
+
+<div class="dashboard-grid">
+    <!-- Upload Form -->
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">📤 Upload Excel File</h3>
+        </div>
+        
+        <form method="POST" action="/import" enctype="multipart/form-data" id="import-form">
+            <div class="form-group">
+                <div class="form-file" style="padding: 48px 24px;">
+                    <input type="file" id="excel_file" name="file" accept=".xlsx,.xls" required>
+                    <div class="form-file-label" id="file-label">
+                        <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+                        <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">
+                            Drop your Excel file here
+                        </div>
+                        <div style="font-size: 13px;">
+                            or click to browse (.xlsx, .xls)
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Validation Mode Toggle -->
+            <div class="form-group" style="background: var(--bg-tertiary); padding: 16px; border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 600; margin-bottom: 4px;">🔒 Strict Validation Mode</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">
+                            Reject rows with invalid values instead of using defaults
+                        </div>
+                    </div>
+                    <label class="toggle-switch">
+                        <input type="checkbox" name="strict_mode" id="strict_mode" value="true" checked>
+                        <span class="toggle-slider"></span>
+                    </label>
+                </div>
+                
+                <div id="strict-mode-info" style="margin-top: 12px; padding: 12px; background: rgba(245, 158, 11, 0.1); border-radius: var(--radius-sm); font-size: 13px;">
+                    <strong style="color: var(--accent-warning);">⚠️ Strict Mode ON:</strong>
+                    <ul style="margin: 8px 0 0 16px; color: var(--text-secondary);">
+                        <li>Rows with invalid Forum values will be <strong>rejected</strong></li>
+                        <li>Rows with invalid Status values will be <strong>rejected</strong></li>
+                        <li>Rows with invalid date formats will be <strong>rejected</strong></li>
+                        <li>Rows missing Case No. AND Petitioner will be <strong>rejected</strong></li>
+                    </ul>
+                </div>
+                
+                <div id="lenient-mode-info" style="margin-top: 12px; padding: 12px; background: rgba(16, 185, 129, 0.1); border-radius: var(--radius-sm); font-size: 13px; display: none;">
+                    <strong style="color: var(--accent-success);">✅ Lenient Mode ON:</strong>
+                    <ul style="margin: 8px 0 0 16px; color: var(--text-secondary);">
+                        <li>Invalid Forum values → Default to "Other Tribunals"</li>
+                        <li>Invalid Status values → Default to "Filed"</li>
+                        <li>Invalid dates → Set to empty</li>
+                        <li>Missing required fields → Still imported with warnings</li>
+                    </ul>
+                </div>
+            </div>
+            
+            <button type="submit" class="btn btn-primary" id="submit-btn" disabled style="width: 100%;">
+                📥 Import Cases
+            </button>
+        </form>
+    </div>
+    
+    <!-- Instructions -->
+    <div>
+        <div class="card mb-3">
+            <div class="card-header">
+                <h3 class="card-title">📋 How It Works</h3>
+            </div>
+            <div style="color: var(--text-secondary); line-height: 1.8;">
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <span style="background: rgba(245, 158, 11, 0.15); color: var(--accent-primary); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">1</span>
+                    <div>
+                        <strong>Download the template</strong> (optional) to see the expected format, or use your existing Excel file.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <span style="background: rgba(245, 158, 11, 0.15); color: var(--accent-primary); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">2</span>
+                    <div>
+                        <strong>Upload your Excel file</strong> with case data. Columns can be in any order.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <span style="background: rgba(245, 158, 11, 0.15); color: var(--accent-primary); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">3</span>
+                    <div>
+                        <strong>The system automatically maps</strong> your columns to the database fields based on column names.
+                    </div>
+                </div>
+                <div style="display: flex; gap: 12px;">
+                    <span style="background: rgba(245, 158, 11, 0.15); color: var(--accent-primary); width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0;">4</span>
+                    <div>
+                        <strong>Cases are created</strong> with auto-generated Case IDs. Invalid rows are skipped with error messages.
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3 class="card-title">📝 Supported Columns</h3>
+            </div>
+            <div style="font-size: 13px; color: var(--text-secondary);">
+                <p style="margin-bottom: 12px;">The importer recognizes various column name formats. Examples:</p>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                    <div class="info-item" style="padding: 10px;">
+                        <div class="info-label">Forum</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Forum, Court, Tribunal</div>
+                    </div>
+                    <div class="info-item" style="padding: 10px;">
+                        <div class="info-label">Case No.</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Case No, Case Number, Writ No</div>
+                    </div>
+                    <div class="info-item" style="padding: 10px;">
+                        <div class="info-label">Status</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Case Status, Status, Stage</div>
+                    </div>
+                    <div class="info-item" style="padding: 10px;">
+                        <div class="info-label">Counsel</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Counsel, Advocate, Lawyer</div>
+                    </div>
+                    <div class="info-item" style="padding: 10px;">
+                        <div class="info-label">Petitioner</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Petitioner, Appellant, Applicant</div>
+                    </div>
+                    <div class="info-item" style="padding: 10px;">
+                        <div class="info-label">Respondent</div>
+                        <div style="font-size: 12px; color: var(--text-muted);">Respondent, Defendant, OP</div>
+                    </div>
+                </div>
+                
+                <p style="margin-top: 12px; font-style: italic; color: var(--text-muted);">
+                    💡 The importer is flexible - it matches columns by similarity, ignoring case and special characters.
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Valid Values Reference -->
+<div class="card mt-3">
+    <div class="card-header">
+        <h3 class="card-title">📊 Valid Values Reference</h3>
+    </div>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 24px;">
+        <div>
+            <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Forum Values</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <span class="badge badge-cat">CAT</span>
+                <span class="badge badge-hc">HC / High Court</span>
+                <span class="badge badge-sc">SC / Supreme Court</span>
+                <span class="badge badge-other">Other Tribunals</span>
+            </div>
+        </div>
+        <div>
+            <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Case Status Values</h4>
+            <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+                <span class="badge badge-filed">Filed / New</span>
+                <span class="badge badge-admission">Admission</span>
+                <span class="badge badge-hearing">Hearing</span>
+                <span class="badge badge-adjourned">Adjourned</span>
+                <span class="badge badge-reserved">Reserved</span>
+                <span class="badge badge-dismissed">Dismissed</span>
+                <span class="badge badge-allowed">Allowed / Disposed</span>
+            </div>
+        </div>
+        <div>
+            <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Boolean Values</h4>
+            <div style="font-size: 13px; color: var(--text-muted);">
+                For Yes/No fields (Is Appeal, ASG Engaged):<br>
+                <code style="color: var(--accent-success);">Yes, Y, True, 1, X</code> = Yes<br>
+                <code style="color: var(--accent-danger);">No, N, False, 0, empty</code> = No
+            </div>
+        </div>
+        <div>
+            <h4 style="font-size: 14px; color: var(--text-secondary); margin-bottom: 12px;">Date Formats</h4>
+            <div style="font-size: 13px; color: var(--text-muted);">
+                Supported formats:<br>
+                <code>2024-01-15</code>, <code>15-01-2024</code>, <code>15/01/2024</code>,<br>
+                <code>15-Jan-2024</code>, <code>15 January 2024</code>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+/* Toggle Switch Styles */
+.toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 50px;
+    height: 26px;
+}
+
+.toggle-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.toggle-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: var(--bg-hover);
+    border: 1px solid var(--border-color);
+    transition: 0.3s;
+    border-radius: 26px;
+}
+
+.toggle-slider:before {
+    position: absolute;
+    content: "";
+    height: 18px;
+    width: 18px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--text-muted);
+    transition: 0.3s;
+    border-radius: 50%;
+}
+
+.toggle-switch input:checked + .toggle-slider {
+    background-color: rgba(245, 158, 11, 0.3);
+    border-color: var(--accent-primary);
+}
+
+.toggle-switch input:checked + .toggle-slider:before {
+    transform: translateX(24px);
+    background-color: var(--accent-primary);
+}
+</style>
+
+<script>
+document.getElementById('excel_file').addEventListener('change', function() {
+    const fileLabel = document.getElementById('file-label');
+    const submitBtn = document.getElementById('submit-btn');
+    
+    if (this.files.length > 0) {
+        const file = this.files[0];
+        fileLabel.innerHTML = `
+            <div style="font-size: 48px; margin-bottom: 16px;">📊</div>
+            <div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; color: var(--accent-success);">
+                ${file.name}
+            </div>
+            <div style="font-size: 13px;">
+                ${(file.size / 1024).toFixed(1)} KB - Ready to import
+            </div>
+        `;
+        fileLabel.style.borderColor = 'var(--accent-success)';
+        submitBtn.disabled = false;
+    } else {
+        submitBtn.disabled = true;
+    }
+});
+
+document.getElementById('import-form').addEventListener('submit', function() {
+    const submitBtn = document.getElementById('submit-btn');
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '⏳ Importing... Please wait';
+});
+
+// Toggle strict mode info display
+document.getElementById('strict_mode').addEventListener('change', function() {
+    const strictInfo = document.getElementById('strict-mode-info');
+    const lenientInfo = document.getElementById('lenient-mode-info');
+    
+    if (this.checked) {
+        strictInfo.style.display = 'block';
+        lenientInfo.style.display = 'none';
+    } else {
+        strictInfo.style.display = 'none';
+        lenientInfo.style.display = 'block';
+    }
+});
+</script>
+{% endblock %}
+

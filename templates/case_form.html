@@ -1,0 +1,424 @@
+{% extends "base.html" %}
+
+{% block title %}{{ 'Edit Case' if case else 'New Case' }} - Litigation Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">{{ 'Edit Case: ' + case.case_id if case else 'Create New Case' }}</h1>
+        <p class="page-subtitle">{{ 'Update case details' if case else 'Fill in the case information' }}</p>
+    </div>
+    <a href="{{ '/cases/' + case.id|string if case else '/cases' }}" class="btn btn-secondary">← Back</a>
+</div>
+
+<form method="POST" action="{{ '/cases/' + case.id|string + '/edit' if case else '/cases/new' }}" enctype="multipart/form-data">
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">📋 Case Information</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="forum">Forum *</label>
+                <select id="forum" name="forum" class="form-select" required>
+                    <option value="">Select Forum</option>
+                    {% for f in forums %}
+                    <option value="{{ f }}" {% if case and case.forum == f %}selected{% endif %}>{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="case_type">Case Type</label>
+                <input type="text" id="case_type" name="case_type" class="form-input" 
+                       placeholder="e.g., Writ Petition, Civil Appeal"
+                       value="{{ case.case_type if case else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="case_no">Case Number</label>
+                <input type="text" id="case_no" name="case_no" class="form-input" 
+                       placeholder="e.g., WP(C) 1234/2024"
+                       value="{{ case.case_no if case else '' }}">
+            </div>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="connected_case_nos">Connected Case Numbers</label>
+                <input type="text" id="connected_case_nos" name="connected_case_nos" class="form-input" 
+                       placeholder="Comma-separated case numbers"
+                       value="{{ case.connected_case_nos if case else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="case_status">Case Status</label>
+                <select id="case_status" name="case_status" class="form-select">
+                    {% for s in statuses %}
+                    <option value="{{ s }}" {% if case and case.case_status == s %}selected{% endif %}>{{ s }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">⚖️ Appeal Information</h3>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-checkbox">
+                <input type="checkbox" name="is_appeal" id="is_appeal" 
+                       {% if case and case.is_appeal %}checked{% endif %}>
+                <span>This case is an Appeal</span>
+            </label>
+        </div>
+        
+        <div id="appeal-details" style="display: {{ 'block' if case and case.is_appeal else 'none' }};">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="lower_court">Lower Court</label>
+                    <input type="text" id="lower_court" name="lower_court" class="form-input" 
+                           placeholder="Name of Lower Court"
+                           value="{{ case.lower_court if case else '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="lower_court_case_no">Lower Court Case Number</label>
+                    <input type="text" id="lower_court_case_no" name="lower_court_case_no" class="form-input" 
+                           placeholder="Case number in Lower Court"
+                           value="{{ case.lower_court_case_no if case else '' }}">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="lower_court_order_date">Lower Court Order Date</label>
+                    <input type="date" id="lower_court_order_date" name="lower_court_order_date" class="form-input"
+                           value="{{ case.lower_court_order_date.strftime('%Y-%m-%d') if case and case.lower_court_order_date else '' }}">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Lower Court Order Document</label>
+                <div class="form-file">
+                    <input type="file" id="lower_court_order_doc" name="lower_court_order_doc" accept=".pdf,.doc,.docx">
+                    <div class="form-file-label">
+                        📎 Click to upload or drag and drop
+                    </div>
+                </div>
+                {% if case and case.lower_court_order_doc %}
+                <p class="text-muted mt-1" style="font-size: 13px;">Current: {{ case.lower_court_order_doc.split('/')[-1] }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">👨‍⚖️ Counsel Information</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="counsel_name">Counsel on Record</label>
+                <input type="text" id="counsel_name" name="counsel_name" class="form-input" 
+                       placeholder="Name of Counsel"
+                       value="{{ case.counsel_name if case else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="counsel_contact">Contact Number</label>
+                <input type="tel" id="counsel_contact" name="counsel_contact" class="form-input" 
+                       placeholder="Phone number"
+                       value="{{ case.counsel_contact if case else '' }}">
+            </div>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-checkbox">
+                <input type="checkbox" name="asg_engaged" 
+                       {% if case and case.asg_engaged %}checked{% endif %}>
+                <span>ASG Engaged</span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">📝 Case Details</h3>
+        </div>
+        
+        <div class="form-group">
+            <label class="form-label" for="brief_facts">Brief Facts</label>
+            <textarea id="brief_facts" name="brief_facts" class="form-textarea" 
+                      placeholder="Describe the brief facts of the case...">{{ case.brief_facts if case else '' }}</textarea>
+        </div>
+    </div>
+    
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">📅 Hearing Information</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="last_hearing_date">Last Hearing Date</label>
+                <input type="date" id="last_hearing_date" name="last_hearing_date" class="form-input"
+                       value="{{ case.last_hearing_date.strftime('%Y-%m-%d') if case and case.last_hearing_date else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="next_hearing_date">Next Hearing Date</label>
+                <input type="date" id="next_hearing_date" name="next_hearing_date" class="form-input"
+                       value="{{ case.next_hearing_date.strftime('%Y-%m-%d') if case and case.next_hearing_date else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="affidavit_status">Affidavit Status</label>
+                <select id="affidavit_status" name="affidavit_status" class="form-select">
+                    <option value="">Select Status</option>
+                    {% for a in affidavit_statuses %}
+                    <option value="{{ a }}" {% if case and case.affidavit_status == a %}selected{% endif %}>{{ a }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+    </div>
+    
+    {% if case %}
+    <div class="card mb-3">
+        <div class="card-header">
+            <h3 class="card-title">📋 Final Order</h3>
+        </div>
+        
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label" for="final_order_date">Final Order Date</label>
+                <input type="date" id="final_order_date" name="final_order_date" class="form-input"
+                       value="{{ case.final_order_date.strftime('%Y-%m-%d') if case and case.final_order_date else '' }}">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Final Order Document</label>
+                <div class="form-file">
+                    <input type="file" id="final_order_doc" name="final_order_doc" accept=".pdf,.doc,.docx">
+                    <div class="form-file-label">
+                        📎 Click to upload or drag and drop
+                    </div>
+                </div>
+                {% if case.final_order_doc %}
+                <p class="text-muted mt-1" style="font-size: 13px;">Current: {{ case.final_order_doc.split('/')[-1] }}</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    
+    <div class="flex gap-2">
+        <button type="submit" class="btn btn-primary">
+            {{ '💾 Update Case' if case else '✨ Create Case' }}
+        </button>
+        <a href="{{ '/cases/' + case.id|string if case else '/cases' }}" class="btn btn-secondary">Cancel</a>
+    </div>
+</form>
+
+{% endblock %}
+
+{% block scripts %}
+<style>
+.validation-error {
+    color: var(--accent-danger);
+    font-size: 12px;
+    margin-top: 4px;
+    display: none;
+}
+
+.form-input.invalid,
+.form-select.invalid {
+    border-color: var(--accent-danger);
+    box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+}
+
+.form-input.valid,
+.form-select.valid {
+    border-color: var(--accent-success);
+}
+
+.validation-summary {
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    border-radius: var(--radius-md);
+    padding: 16px;
+    margin-bottom: 20px;
+    display: none;
+}
+
+.validation-summary h4 {
+    color: var(--accent-danger);
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.validation-summary ul {
+    margin: 0;
+    padding-left: 20px;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+</style>
+
+<script>
+    // Toggle appeal details visibility
+    document.getElementById('is_appeal').addEventListener('change', function() {
+        document.getElementById('appeal-details').style.display = this.checked ? 'block' : 'none';
+    });
+
+    // Form validation
+    const form = document.querySelector('form');
+    const validationSummary = document.createElement('div');
+    validationSummary.className = 'validation-summary';
+    validationSummary.innerHTML = '<h4>⚠️ Please fix the following errors:</h4><ul id="error-list"></ul>';
+    form.insertBefore(validationSummary, form.firstChild);
+
+    // Add validation error spans to form groups
+    document.querySelectorAll('.form-group').forEach(group => {
+        const input = group.querySelector('input, select, textarea');
+        if (input) {
+            const errorSpan = document.createElement('span');
+            errorSpan.className = 'validation-error';
+            errorSpan.id = `error-${input.id}`;
+            group.appendChild(errorSpan);
+        }
+    });
+
+    // Validation rules
+    const validations = {
+        forum: {
+            required: true,
+            message: 'Forum is required'
+        },
+        counsel_contact: {
+            pattern: /^[0-9+\-\s()]*$/,
+            message: 'Contact number can only contain digits, +, -, spaces, and parentheses'
+        },
+        next_hearing_date: {
+            custom: (value) => {
+                if (!value) return true;
+                const date = new Date(value);
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                return date >= today;
+            },
+            message: 'Next hearing date should be today or in the future'
+        },
+        lower_court_order_date: {
+            custom: (value) => {
+                if (!value) return true;
+                const date = new Date(value);
+                const today = new Date();
+                return date <= today;
+            },
+            message: 'Lower court order date cannot be in the future'
+        }
+    };
+
+    // Validate single field
+    function validateField(input) {
+        const rules = validations[input.id];
+        const errorSpan = document.getElementById(`error-${input.id}`);
+        let isValid = true;
+        let errorMessage = '';
+
+        if (rules) {
+            // Required check
+            if (rules.required && !input.value.trim()) {
+                isValid = false;
+                errorMessage = rules.message || 'This field is required';
+            }
+            // Pattern check
+            else if (rules.pattern && input.value && !rules.pattern.test(input.value)) {
+                isValid = false;
+                errorMessage = rules.message;
+            }
+            // Custom validation
+            else if (rules.custom && !rules.custom(input.value)) {
+                isValid = false;
+                errorMessage = rules.message;
+            }
+        }
+
+        // Update UI
+        input.classList.toggle('invalid', !isValid);
+        input.classList.toggle('valid', isValid && input.value);
+        
+        if (errorSpan) {
+            errorSpan.textContent = errorMessage;
+            errorSpan.style.display = isValid ? 'none' : 'block';
+        }
+
+        return isValid;
+    }
+
+    // Add real-time validation
+    document.querySelectorAll('input, select, textarea').forEach(input => {
+        input.addEventListener('blur', () => validateField(input));
+        input.addEventListener('change', () => validateField(input));
+    });
+
+    // Form submission validation
+    form.addEventListener('submit', function(e) {
+        let isFormValid = true;
+        const errors = [];
+
+        // Validate all fields with rules
+        Object.keys(validations).forEach(fieldId => {
+            const input = document.getElementById(fieldId);
+            if (input && !validateField(input)) {
+                isFormValid = false;
+                errors.push(validations[fieldId].message);
+            }
+        });
+
+        // Additional business logic validation
+        const isAppeal = document.getElementById('is_appeal').checked;
+        const lowerCourt = document.getElementById('lower_court').value;
+        
+        if (isAppeal && !lowerCourt) {
+            isFormValid = false;
+            errors.push('Lower Court is required when case is an appeal');
+            const input = document.getElementById('lower_court');
+            input.classList.add('invalid');
+            const errorSpan = document.getElementById('error-lower_court');
+            if (errorSpan) {
+                errorSpan.textContent = 'Required for appeal cases';
+                errorSpan.style.display = 'block';
+            }
+        }
+
+        // Check hearing dates consistency
+        const lastHearing = document.getElementById('last_hearing_date').value;
+        const nextHearing = document.getElementById('next_hearing_date').value;
+        
+        if (lastHearing && nextHearing && new Date(lastHearing) > new Date(nextHearing)) {
+            isFormValid = false;
+            errors.push('Last hearing date cannot be after next hearing date');
+        }
+
+        // Show/hide validation summary
+        if (!isFormValid) {
+            e.preventDefault();
+            validationSummary.style.display = 'block';
+            const errorList = document.getElementById('error-list');
+            errorList.innerHTML = errors.map(err => `<li>${err}</li>`).join('');
+            validationSummary.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        } else {
+            validationSummary.style.display = 'none';
+            // Show loading state
+            const submitBtn = form.querySelector('button[type="submit"]');
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⏳ Saving...';
+        }
+    });
+</script>
+{% endblock %}
+

@@ -1,0 +1,20 @@
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+sqlalchemy==2.0.23
+python-jose[cryptography]==3.3.0
+passlib==1.7.4
+bcrypt==4.0.1
+python-multipart==0.0.6
+jinja2==3.1.2
+aiofiles==23.2.1
+pydantic==2.5.2
+pydantic-settings==2.1.0
+email-validator==2.2.0
+openpyxl==3.1.2
+pandas==2.1.3
+
+# For Windows Desktop App (optional - only needed for building installer)
+# pyinstaller==6.3.0
+# pillow==10.1.0
+# pystray==0.19.5  # For system tray icon (optional)
+

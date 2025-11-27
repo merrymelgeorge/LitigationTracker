@@ -1,0 +1,124 @@
+{% extends "base.html" %}
+
+{% block title %}All Cases - Litigation Tracker{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">All Cases</h1>
+        <p class="page-subtitle">{{ total }} cases found</p>
+    </div>
+    <a href="/cases/new" class="btn btn-primary">➕ New Case</a>
+</div>
+
+<!-- Search & Filters -->
+<form class="search-filters" method="GET" action="/cases">
+    <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" name="search" class="form-input" 
+               placeholder="Search by case number or party name..." 
+               value="{{ search }}">
+    </div>
+    
+    <select name="forum" class="form-select filter-select">
+        <option value="">All Forums</option>
+        {% for forum in forums %}
+        <option value="{{ forum }}" {% if current_forum == forum %}selected{% endif %}>{{ forum }}</option>
+        {% endfor %}
+    </select>
+    
+    <select name="status" class="form-select filter-select">
+        <option value="">All Statuses</option>
+        {% for status in statuses %}
+        <option value="{{ status }}" {% if current_status == status %}selected{% endif %}>{{ status }}</option>
+        {% endfor %}
+    </select>
+    
+    <button type="submit" class="btn btn-secondary">🔍 Search</button>
+    
+    {% if search or current_status or current_forum %}
+    <a href="/cases" class="btn btn-secondary">✕ Clear</a>
+    {% endif %}
+</form>
+
+<!-- Cases Table -->
+<div class="card">
+    {% if cases %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Case ID</th>
+                    <th>Case No.</th>
+                    <th>Forum</th>
+                    <th>Case Type</th>
+                    <th>Counsel</th>
+                    <th>Next Hearing</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for case in cases %}
+                <tr>
+                    <td><span class="case-id">{{ case.case_id }}</span></td>
+                    <td>{{ case.case_no or '-' }}</td>
+                    <td><span class="badge badge-{{ case.forum|lower|replace(' ', '')|replace('tribunals', '') }}">{{ case.forum }}</span></td>
+                    <td>{{ case.case_type or '-' }}</td>
+                    <td>{{ case.counsel_name or '-' }}</td>
+                    <td>{{ case.next_hearing_date.strftime('%d %b %Y') if case.next_hearing_date else '-' }}</td>
+                    <td><span class="badge badge-{{ case.case_status|lower }}">{{ case.case_status }}</span></td>
+                    <td>
+                        <div class="flex gap-1">
+                            <a href="/cases/{{ case.id }}" class="btn btn-sm btn-secondary btn-icon" title="View">👁️</a>
+                            <a href="/cases/{{ case.id }}/edit" class="btn btn-sm btn-secondary btn-icon" title="Edit">✏️</a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <div class="pagination">
+        {% if page > 1 %}
+        <a href="/cases?page={{ page - 1 }}&search={{ search }}&status={{ current_status }}&forum={{ current_forum }}" class="page-link">←</a>
+        {% endif %}
+        
+        {% for p in range(1, total_pages + 1) %}
+            {% if p == page %}
+            <span class="page-link active">{{ p }}</span>
+            {% elif p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            <a href="/cases?page={{ p }}&search={{ search }}&status={{ current_status }}&forum={{ current_forum }}" class="page-link">{{ p }}</a>
+            {% elif p == page - 3 or p == page + 3 %}
+            <span class="page-link">...</span>
+            {% endif %}
+        {% endfor %}
+        
+        {% if page < total_pages %}
+        <a href="/cases?page={{ page + 1 }}&search={{ search }}&status={{ current_status }}&forum={{ current_forum }}" class="page-link">→</a>
+        {% endif %}
+    </div>
+    {% endif %}
+    
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📂</div>
+        <div class="empty-title">No Cases Found</div>
+        <div class="empty-text">
+            {% if search or current_status or current_forum %}
+            Try adjusting your search or filters
+            {% else %}
+            Start by adding your first case
+            {% endif %}
+        </div>
+        {% if not search and not current_status and not current_forum %}
+        <a href="/cases/new" class="btn btn-primary mt-2">➕ Add First Case</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+

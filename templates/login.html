@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Litigation Tracker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-box">
+            <div class="login-logo">
+                <div class="login-logo-icon">⚖️</div>
+                <h1 class="login-title">Litigation Tracker</h1>
+                <p class="login-subtitle">Sign in to manage your cases</p>
+            </div>
+            
+            {% if error %}
+            <div class="login-error">
+                ⚠️ {{ error }}
+            </div>
+            {% endif %}
+            
+            <form class="login-form" method="POST" action="/login">
+                <div class="form-group">
+                    <label class="form-label" for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-input" 
+                           placeholder="Enter your username" required autofocus>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-input" 
+                           placeholder="Enter your password" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary login-btn">
+                    🔐 Sign In
+                </button>
+            </form>
+            
+            <div class="mt-3 text-center text-muted" style="font-size: 13px;">
+                Default credentials: <code style="color: var(--accent-primary);">admin / admin123</code>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+

@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Litigation Tracker{% endblock %}</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>⚖️</text></svg>">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="logo">
+                <div class="logo-icon">⚖️</div>
+                <div class="logo-text">LitigationTracker</div>
+            </div>
+            
+            <nav>
+                <ul class="nav-menu">
+                    <li class="nav-item">
+                        <a href="/dashboard" class="nav-link {% if request.url.path == '/dashboard' %}active{% endif %}">
+                            <span class="nav-icon">📊</span>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/cases" class="nav-link {% if '/cases' in request.url.path and '/new' not in request.url.path %}active{% endif %}">
+                            <span class="nav-icon">📁</span>
+                            All Cases
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/cases/new" class="nav-link {% if request.url.path == '/cases/new' %}active{% endif %}">
+                            <span class="nav-icon">➕</span>
+                            New Case
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="/import" class="nav-link {% if '/import' in request.url.path %}active{% endif %}">
+                            <span class="nav-icon">📥</span>
+                            Import from Excel
+                        </a>
+                    </li>
+                    {% if user and user.role == 'admin' %}
+                    <li class="nav-item">
+                        <a href="/users" class="nav-link {% if '/users' in request.url.path %}active{% endif %}">
+                            <span class="nav-icon">👥</span>
+                            User Management
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </nav>
+            
+            <div class="user-section">
+                <div class="user-info">
+                    <div class="user-avatar">{{ user.full_name[0] if user else 'U' }}</div>
+                    <div>
+                        <div class="user-name">{{ user.full_name if user else 'User' }}</div>
+                        <div class="user-role">{{ user.role if user else 'Guest' }}</div>
+                    </div>
+                </div>
+                <a href="/logout" class="logout-btn">🚪 Sign Out</a>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="main-content">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+    
+    <script src="/static/js/app.js"></script>
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+
