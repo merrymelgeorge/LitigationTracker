@@ -4,6 +4,7 @@ A web-based platform for tracking litigations
 """
 import os
 import shutil
+from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 from typing import Optional, List
 from fastapi import FastAPI, Depends, HTTPException, status, Request, Form, UploadFile, File, Query
@@ -24,8 +25,21 @@ from auth import (
     create_default_admin, ACCESS_TOKEN_EXPIRE_MINUTES
 )
 
+
+# Lifespan context manager for startup/shutdown events
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Initialize database and create default admin on startup"""
+    init_db()
+    db = next(get_db())
+    create_default_admin(db)
+    db.close()
+    yield
+    # Cleanup on shutdown (if needed)
+
+
 # Initialize app
-app = FastAPI(title="Litigation Tracker", version="1.0.0")
+app = FastAPI(title="Litigation Tracker", version="1.0.0", lifespan=lifespan)
 
 # Mount static files and templates
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -68,17 +82,6 @@ class PartyData(BaseModel):
 class HearingData(BaseModel):
     hearing_date: date
     brief: str
-
-
-# ============== Startup Event ==============
-
-@app.on_event("startup")
-async def startup_event():
-    """Initialize database and create default admin"""
-    init_db()
-    db = next(get_db())
-    create_default_admin(db)
-    db.close()
 
 
 # ============== Helper Functions ==============

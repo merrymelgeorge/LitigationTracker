@@ -96,9 +96,11 @@ class Case(Base):
     
     # Relationships
     petitioners = relationship("Party", back_populates="case", foreign_keys="Party.case_id", 
-                               primaryjoin="and_(Case.id==Party.case_id, Party.party_type=='petitioner')")
+                               primaryjoin="and_(Case.id==Party.case_id, Party.party_type=='petitioner')",
+                               overlaps="respondents,case")
     respondents = relationship("Party", back_populates="case", foreign_keys="Party.case_id",
-                               primaryjoin="and_(Case.id==Party.case_id, Party.party_type=='respondent')")
+                               primaryjoin="and_(Case.id==Party.case_id, Party.party_type=='respondent')",
+                               overlaps="petitioners,case")
     documents = relationship("Document", back_populates="case")
     hearings = relationship("Hearing", back_populates="case", order_by="desc(Hearing.hearing_date)")
     
@@ -116,7 +118,7 @@ class Party(Base):
     name = Column(String(200), nullable=False)
     address = Column(Text)
     
-    case = relationship("Case", back_populates="petitioners", foreign_keys=[case_id], overlaps="respondents")
+    case = relationship("Case", back_populates="petitioners", foreign_keys=[case_id], overlaps="petitioners,respondents")
 
 
 class Document(Base):
