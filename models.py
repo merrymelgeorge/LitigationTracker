@@ -1,6 +1,9 @@
 """
 Database Models for Litigation Tracker
 """
+import os
+import sys
+from pathlib import Path
 from datetime import datetime, date
 from typing import Optional, List
 from sqlalchemy import create_engine, Column, Integer, String, Text, Date, DateTime, Boolean, ForeignKey, Enum as SQLEnum
@@ -8,7 +11,21 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 import enum
 
-DATABASE_URL = "sqlite:///./litigation_tracker.db"
+
+def get_database_path() -> str:
+    """Get the database path (handles both dev and frozen exe)"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable - use executable's directory
+        base_dir = Path(os.path.dirname(sys.executable))
+    else:
+        # Running as script
+        base_dir = Path(__file__).parent
+    
+    db_path = base_dir / "litigation_tracker.db"
+    return f"sqlite:///{db_path}"
+
+
+DATABASE_URL = get_database_path()
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()

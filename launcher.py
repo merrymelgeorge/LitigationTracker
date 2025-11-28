@@ -8,7 +8,6 @@ import time
 import socket
 import webbrowser
 import threading
-import subprocess
 from pathlib import Path
 
 # Determine if running as frozen executable or script
@@ -53,6 +52,11 @@ def open_browser(port: int):
 
 def setup_environment():
     """Setup the working directory and environment"""
+    # Add app directory to Python path FIRST
+    sys.path.insert(0, str(APP_DIR))
+    sys.path.insert(0, str(DATA_DIR))
+    
+    # Change to data directory for database and uploads
     os.chdir(DATA_DIR)
     
     # Ensure required directories exist
@@ -61,18 +65,22 @@ def setup_environment():
     
     # Set environment variables
     os.environ["PYTHONDONTWRITEBYTECODE"] = "1"
+    
+    # Verify static directory exists
+    static_dir = APP_DIR / "static"
+    templates_dir = APP_DIR / "templates"
+    
+    if not static_dir.exists():
+        print(f"Warning: Static directory not found at {static_dir}")
+    if not templates_dir.exists():
+        print(f"Warning: Templates directory not found at {templates_dir}")
 
 
 def run_server(port: int):
     """Run the FastAPI server"""
     import uvicorn
     
-    # Import and run the app
     try:
-        # Add app directory to path
-        sys.path.insert(0, str(APP_DIR))
-        sys.path.insert(0, str(DATA_DIR))
-        
         from main import app
         
         print(f"\n{'='*50}")
@@ -85,6 +93,8 @@ def run_server(port: int):
         
     except Exception as e:
         print(f"Error starting server: {e}")
+        import traceback
+        traceback.print_exc()
         input("Press Enter to exit...")
         sys.exit(1)
 
@@ -92,6 +102,8 @@ def run_server(port: int):
 def main():
     """Main entry point"""
     print(f"Starting {APP_NAME}...")
+    print(f"App directory: {APP_DIR}")
+    print(f"Data directory: {DATA_DIR}")
     
     # Setup environment
     setup_environment()

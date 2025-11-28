@@ -3,7 +3,9 @@ Litigation Tracker - Main Application
 A web-based platform for tracking litigations
 """
 import os
+import sys
 import shutil
+from pathlib import Path
 from contextlib import asynccontextmanager
 from datetime import datetime, date, timedelta
 from typing import Optional, List
@@ -26,10 +28,43 @@ from auth import (
 )
 
 
+# ============== Path Resolution for PyInstaller ==============
+def get_base_path() -> Path:
+    """Get the base path for resources (handles both dev and frozen exe)"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable (PyInstaller)
+        return Path(sys._MEIPASS)
+    else:
+        # Running as script
+        return Path(__file__).parent
+
+
+def get_data_path() -> Path:
+    """Get the data path for user data (database, uploads)"""
+    if getattr(sys, 'frozen', False):
+        # Running as compiled executable - use executable's directory
+        return Path(os.path.dirname(sys.executable))
+    else:
+        # Running as script
+        return Path(__file__).parent
+
+
+# Set up paths
+BASE_PATH = get_base_path()
+DATA_PATH = get_data_path()
+
+STATIC_DIR = BASE_PATH / "static"
+TEMPLATES_DIR = BASE_PATH / "templates"
+UPLOADS_DIR = DATA_PATH / "uploads"
+
+
 # Lifespan context manager for startup/shutdown events
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Initialize database and create default admin on startup"""
+    # Change working directory to data path for database
+    os.chdir(DATA_PATH)
+    
     init_db()
     db = next(get_db())
     create_default_admin(db)
@@ -41,13 +76,13 @@ async def lifespan(app: FastAPI):
 # Initialize app
 app = FastAPI(title="Litigation Tracker", version="1.0.0", lifespan=lifespan)
 
-# Mount static files and templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-app.mount("/uploads", StaticFiles(directory="uploads"), name="uploads")
-templates = Jinja2Templates(directory="templates")
+# Mount static files and templates with resolved paths
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+app.mount("/uploads", StaticFiles(directory=str(UPLOADS_DIR)), name="uploads")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 # Ensure upload directory exists
-os.makedirs("uploads", exist_ok=True)
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
 
 # ============== Pydantic Schemas ==============
